@@ -16,9 +16,13 @@ import signal
 import subprocess
 import time
 import datetime
-import requests
 import urllib.request
 import urllib.error
+try:
+    import requests
+    NO_EPG = False
+except ImportError:
+    NO_EPG = True
 
 ###############################################################################################################
 
@@ -1087,35 +1091,37 @@ def EPG_Anzeigen(land):
             idx = Sender_Liste.curselection()[0]
             ch_id = "&channel_id=" + epgID[idx]
             URL = link + datum + ch_id                                  # URL zusammenbauen
-            try:
-                xml_dat = requests.get(URL, timeout=5)
-            except requests.exceptions.Timeout:
-                Info_Liste.insert("end", "  EPG download error: timed out")
+            if NO_EPG:
+                Info_Liste.insert("end", "  Python Requests Module not found.")
             else:
-                if xml_dat.status_code != 200:
-                    Info_Liste.insert("end", "  EPG download error: " + str(xml_dat.status_code))
+                try:
+                    xml_dat = requests.get(URL, timeout=5)
+                except requests.exceptions.Timeout:
+                    Info_Liste.insert("end", "  EPG download error: timed out")
                 else:
-                    sFenster.title(land)
-                    Info_Liste.delete("0", "end")
-                    xml_text = str(xml_dat.text)
-                    x = y = z = v = w = 0
-                    epgTitel.clear()
-                    epgDesc.clear()
-                    while 1:  
-                        x = xml_text.find('start="', x)                 # Startzeit suchen
-                        if x == -1:    break
-                        y = xml_text.find('<title lang="', y)           # Titel-Anfang suchen
-                        z = xml_text.find("</title>", y+17)             # Titel-Ende suchen (ab Textanfang)
-                        v = xml_text.find("<desc", v)                   # Beschreibung-Anfang suchen
-                        epgTitel.append(xml_text[y+17:z])
-                        if xml_text[v+6:v+8] == "/>":
-                            epgDesc.append(TxT["Keine Beschreibung"])
-                        else:
-                            w = xml_text.find("</desc>", v+6)           # Beschreibung-Ende suchen (ab Textanfang)
-                            epgDesc.append(xml_text[v+6:w])
-                        Info_Liste.insert("end", "  " + xml_text[x+15:x+17] + ":" + xml_text[x+17:x+19] + " - " + xml_text[y+17:z])
-                        x += 50; y += 50; z += 50;v += 50; w += 50;
-
+                    if xml_dat.status_code != 200:
+                        Info_Liste.insert("end", "  EPG download error: " + str(xml_dat.status_code))
+                    else:
+                        sFenster.title(land)
+                        Info_Liste.delete("0", "end")
+                        xml_text = str(xml_dat.text)
+                        x = y = z = v = w = 0
+                        epgTitel.clear()
+                        epgDesc.clear()
+                        while 1:  
+                            x = xml_text.find('start="', x)                 # Startzeit suchen
+                            if x == -1:    break
+                            y = xml_text.find('<title lang="', y)           # Titel-Anfang suchen
+                            z = xml_text.find("</title>", y+17)             # Titel-Ende suchen (ab Textanfang)
+                            v = xml_text.find("<desc", v)                   # Beschreibung-Anfang suchen
+                            epgTitel.append(xml_text[y+17:z])
+                            if xml_text[v+6:v+8] == "/>":
+                                epgDesc.append(TxT["Keine Beschreibung"])
+                            else:
+                                w = xml_text.find("</desc>", v+6)           # Beschreibung-Ende suchen (ab Textanfang)
+                                epgDesc.append(xml_text[v+6:w])
+                            Info_Liste.insert("end", "  " + xml_text[x+15:x+17] + ":" + xml_text[x+17:x+19] + " - " + xml_text[y+17:z])
+                            x += 50; y += 50; z += 50;v += 50; w += 50;
 
     def Datum_Mausklick(tag):
 
